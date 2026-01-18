@@ -50,8 +50,7 @@ jobs:
       - name: SonarQube analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: ./gradlew sonar -Dsonar.login=$SONAR_TOKEN
+        run: ./gradlew build sonar --info
 
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
