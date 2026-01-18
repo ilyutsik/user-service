@@ -61,6 +61,7 @@ public class UserServiceImpl implements UserService {
     public UserDto updateById(Long id, UserDto newUserDto) {
         User updatedUser = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
+        checkEmailUnique(newUserDto.getEmail());
         updatedUser.setName(newUserDto.getName());
         updatedUser.setSurname(newUserDto.getSurname());
         updatedUser.setEmail(newUserDto.getEmail());

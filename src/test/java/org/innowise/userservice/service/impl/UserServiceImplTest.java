@@ -1,5 +1,6 @@
 package org.innowise.userservice.service.impl;
 
+import org.innowise.userservice.exception.UserAlreadyExistsException;
 import org.innowise.userservice.repository.UserRepository;
 import org.innowise.userservice.model.dto.UserDto;
 import org.innowise.userservice.exception.UserNotFoundException;
@@ -70,7 +71,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void create_ShouldSaveAndReturnDto() {
+    void create_WhenUserDoesNotExists_ShouldSaveAndReturnDto() {
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         UserDto result = userServiceImpl.create(userDto);
@@ -80,7 +81,16 @@ class UserServiceImplTest {
     }
 
     @Test
-    void getById_ShouldReturnUser_WhenExists() {
+    void create_WhenUserAlreadyExist_ShouldThrowException() {
+        when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
+
+        Assertions.assertThrows(UserAlreadyExistsException.class,
+                () -> userServiceImpl.create(userDto));
+    }
+
+
+    @Test
+    void getById_WhenExists_ShouldReturnUser() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         UserDto result = userServiceImpl.getById(1L);
@@ -89,14 +99,14 @@ class UserServiceImplTest {
     }
 
     @Test
-    void getById_ShouldThrow_WhenNotFound() {
+    void getById_UserNotFond_ShouldThrowException() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> userServiceImpl.getById(1L))
                 .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test
-    void getAll_ShouldReturnUsers() {
+    void getAll_WhenUsersExists_ShouldReturnUsers() {
         when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(userPage);
 
         Page<UserDto> page = userServiceImpl.getAll(0, 10, "", "");
@@ -105,9 +115,10 @@ class UserServiceImplTest {
     }
 
     @Test
-    void updateById_ShouldUpdateFields() {
+    void updateById_WhenUserExists_ShouldUpdateFields() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenReturn(user);
+        when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.empty());
 
         userDto.setName("Valera");
         UserDto result = userServiceImpl.updateById(1L, userDto);
@@ -117,7 +128,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void updateById_ShouldThrow_WhenNotFound() {
+    void updateById_WhenUserNotFound_ShouldThrowException() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(UserNotFoundException.class, () -> userServiceImpl.updateById(1L, userDto));
@@ -125,7 +136,16 @@ class UserServiceImplTest {
     }
 
     @Test
-    void activate_ShouldReturnActivatedUser() {
+    void updateById_WhenEmailExists_ShouldThrowException() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
+        Assertions.assertThrows(UserAlreadyExistsException.class, () -> userServiceImpl.updateById(1L, userDto));
+        verify(userRepository).findById(1L);
+        verify(userRepository).findByEmail(userDto.getEmail());
+    }
+
+    @Test
+    void activate_WhenUserExists_ShouldReturnActivatedUser() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -138,7 +158,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void activate_ShouldThrowException_WhenUserNotFound() {
+    void activate_WhenUserNotFound_ShouldThrowException() {
         when(userRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
@@ -149,7 +169,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void deactivate_ShouldReturnDeactivatedUser() {
+    void deactivate_WhenUserExists_ShouldReturnDeactivatedUser() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -162,7 +182,7 @@ class UserServiceImplTest {
     }
 
     @Test
-    void deactivate_ShouldThrowException_WhenUserNotFound() {
+    void deactivate_WhenUserNotFound_ShouldThrowException() {
         when(userRepository.findById(1L))
                 .thenReturn(Optional.empty());
 

@@ -41,7 +41,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         Long userId = paymentCardDto.getUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        if (USER_MAX_CARDS < paymentCardRepository.countByUserIdAndActiveTrue(userId))
+        if (USER_MAX_CARDS <= paymentCardRepository.countByUserIdAndActiveTrue(userId))
             throw new MaxCardsExceededException(userId);
         return toDto(paymentCardRepository.save(toEntity(paymentCardDto)));
     }

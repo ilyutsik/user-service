@@ -1,5 +1,7 @@
 package org.innowise.userservice.service.impl;
 
+import org.innowise.userservice.exception.MaxCardsExceededException;
+import org.innowise.userservice.exception.UserNotFoundException;
 import org.innowise.userservice.repository.PaymentCardRepository;
 import org.innowise.userservice.repository.UserRepository;
 import org.innowise.userservice.model.dto.PaymentCardDto;
@@ -60,8 +62,10 @@ class PaymentCardServiceImplTest {
         user = new User();
         user.setId(1L);
         user.setName("TestName");
+        user.setSurname("surname");
+        user.setBirthDate(LocalDate.parse("2003-09-20"));
+        user.setEmail("test@mail.com");
 
-        MockitoAnnotations.openMocks(this);
         paymentCard = new PaymentCard();
         paymentCard.setId(1L);
         paymentCard.setHolder("Andrei");
@@ -70,7 +74,7 @@ class PaymentCardServiceImplTest {
         paymentCard.setUser(user);
 
         paymentCard2 = new PaymentCard();
-        paymentCard2.setId(2L);
+        paymentCard2.setId(1L);
         paymentCard2.setHolder("Valera");
         paymentCard2.setNumber(12L);
         paymentCard2.setExpirationDate(LocalDate.of(2003, 9, 20));
@@ -86,13 +90,13 @@ class PaymentCardServiceImplTest {
         List<PaymentCard> paymentCardDtoList = List.of(paymentCard);
 
         cardPage = new PageImpl<>(paymentCardDtoList, PageRequest.of(0, 10), paymentCardDtoList.size());
-
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void create_ShouldSaveAndReturnDto() {
         when(paymentCardRepository.save(any(PaymentCard.class))).thenReturn(paymentCard);
-        when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.of(user));
         when(paymentCardRepository.countByUserIdAndActiveTrue(any(Long.class))).thenReturn(1L);
 
         PaymentCardDto result = paymentCardServiceImpl.create(paymentCardDto);
@@ -104,7 +108,26 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void getById_ShouldReturnUser_WhenExists() {
+    void create_WhenUserNotFound_ShouldThrowException() {
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> paymentCardServiceImpl.create(paymentCardDto));
+
+    }
+
+    @Test
+    void create_WhenMaxCardsExceeded_ShouldThrowException() {
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.of(user));
+        when(paymentCardRepository.countByUserIdAndActiveTrue(any(Long.class))).thenReturn(6L);
+
+        Assertions.assertThrows(MaxCardsExceededException.class,
+                () -> paymentCardServiceImpl.create(paymentCardDto));
+
+    }
+
+    @Test
+    void getById_WhenCardExists_ShouldReturnUser() {
         when(paymentCardRepository.findById(1L)).thenReturn(Optional.of(paymentCard));
 
         PaymentCardDto result = paymentCardServiceImpl.getById(1L);
@@ -114,7 +137,7 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void getById_ShouldThrow_WhenNotFound() {
+    void getById_WhenPaymentCardNotFound_ShouldThrowException() {
         when(paymentCardRepository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> paymentCardServiceImpl.getById(1L))
                 .isInstanceOf(PaymentCardNotFoundException.class);
@@ -122,16 +145,6 @@ class PaymentCardServiceImplTest {
         verify(paymentCardRepository).findById(1L);
     }
 
-    @Test
-    void getAll_ShouldReturnUsers() {
-        when(paymentCardRepository.findAll(any(Pageable.class))).thenReturn(cardPage);
-
-        Page<PaymentCardDto> page = paymentCardServiceImpl.getAll(0, 10);
-
-        assertThat(page.get().findFirst().get().getHolder()).isEqualTo("Andrei");
-
-        verify(paymentCardRepository).findAll(any(Pageable.class));
-    }
 
     @Test
     void getAll_ShouldReturnPageOfPaymentCards() {
@@ -149,7 +162,7 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void getAll_ShouldReturnEmptyPage_WhenNoCards() {
+    void getAll_WhenNoCards_ShouldReturnEmptyPage() {
         when(paymentCardRepository.findAll(any(Pageable.class)))
                 .thenReturn(Page.empty());
 
@@ -161,8 +174,11 @@ class PaymentCardServiceImplTest {
         verify(paymentCardRepository).findAll(any(Pageable.class));
     }
 
+
+
     @Test
     void getAllByUserId_ShouldReturnActiveCards() {
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
         when(paymentCardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(List.of(paymentCard, paymentCard2));
 
         List<PaymentCardDto> result = paymentCardServiceImpl.getAllByUserId(1L);
@@ -174,7 +190,8 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void getAllByUserId_ShouldReturnEmptyList_WhenNoCards() {
+    void getAllByUserId_WhenNoCards_ShouldReturnEmptyList() {
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
         when(paymentCardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(List.of());
 
         List<PaymentCardDto> result = paymentCardServiceImpl.getAllByUserId(1L);
@@ -182,6 +199,14 @@ class PaymentCardServiceImplTest {
         assertThat(result).hasSize(0);
 
         verify(paymentCardRepository).findByUserIdAndActiveTrue(1L);
+    }
+
+    @Test
+    void getAllByUserId_WhenUserNotFound_ShouldThrowException() {
+        when(userRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> paymentCardServiceImpl.getAllByUserId(user.getId()));
     }
 
     @Test
@@ -198,11 +223,12 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void activate_ShouldThrowException_WhenPaymentCardNotFound() {
+    void activate_WhenPaymentCardNotFound_ShouldThrowException() {
         when(paymentCardRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
-        Assertions.assertThrows(PaymentCardNotFoundException.class, () -> paymentCardServiceImpl.activate(1L));
+        Assertions.assertThrows(PaymentCardNotFoundException.class,
+                () -> paymentCardServiceImpl.activate(1L));
 
         verify(paymentCardRepository).findById(1L);
         verify(paymentCardRepository, never()).save(any());
@@ -222,11 +248,12 @@ class PaymentCardServiceImplTest {
     }
 
     @Test
-    void deactivate_ShouldThrowException_WhenPaymentCardNotFound() {
+    void deactivate_WhenPaymentCardNotFound_ShouldThrowException() {
         when(paymentCardRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
-        Assertions.assertThrows(PaymentCardNotFoundException.class, () -> paymentCardServiceImpl.deactivate(1L));
+        Assertions.assertThrows(PaymentCardNotFoundException.class,
+                () -> paymentCardServiceImpl.deactivate(1L));
 
         verify(paymentCardRepository).findById(1L);
         verify(paymentCardRepository, never()).save(any());
