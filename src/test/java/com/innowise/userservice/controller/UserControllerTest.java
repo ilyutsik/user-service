@@ -1,7 +1,9 @@
 package com.innowise.userservice.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,7 +51,7 @@ public class UserControllerTest extends IntegrationTestBase {
   @Autowired
   private UserRepository userRepository;
   @Autowired
-  private UserDataFactory factory;
+  private UserDataFactory userFactory;
   @Autowired
   private UserMapper userMapper;
   @Autowired
@@ -94,7 +96,7 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void create_whenInvalidUser_shouldReturnBadRequest() throws Exception {
-    UserDto incorrectDto = toDto(factory.createRandomUser());
+    UserDto incorrectDto = toDto(userFactory.createAndSaveNewTestUser());
     incorrectDto.setName("");
     mockMvc.perform(post(UserApi.BASE).contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(incorrectDto))).andExpect(status().isBadRequest());
@@ -102,7 +104,7 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void userById_whenExist_shouldReturnUser() throws Exception {
-    UserDto userDto = toDto(factory.createRandomUser());
+    UserDto userDto = toDto(userFactory.createAndSaveNewTestUser());
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE + UserApi.ID, userDto.getId()).accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
@@ -120,8 +122,8 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void allUsers_ShouldReturnAllUsers() throws Exception {
-    factory.createRandomUser();
-    factory.createRandomUser();
+    userFactory.createAndSaveNewTestUser();
+    userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
         get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, "").param(SURNAME, "")
             .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
@@ -134,8 +136,8 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void allUsers_withNameFilter_shouldReturnFilteredUsers() throws Exception {
-    User user = factory.createRandomUser();
-    factory.createRandomUser();
+    User user = userFactory.createAndSaveNewTestUser();
+    userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, user.getName())
                 .param(SURNAME, "").accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk())
@@ -150,8 +152,8 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void allUsers_withSurnameFilter_shouldReturnFilteredUsers() throws Exception {
-    User user = factory.createRandomUser();
-    factory.createRandomUser();
+    User user = userFactory.createAndSaveNewTestUser();
+    userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, "")
                 .param(SURNAME, user.getSurname()).accept(MediaType.APPLICATION_JSON))
@@ -166,8 +168,8 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void allUsers_withBothFilters_shouldReturnFilteredUsers() throws Exception {
-    User user1 = factory.createRandomUser();
-    User user2 = factory.createRandomUser();
+    User user1 = userFactory.createAndSaveNewTestUser();
+    User user2 = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, user1.getName())
                 .param(SURNAME, user2.getSurname()).accept(MediaType.APPLICATION_JSON))
@@ -181,7 +183,7 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void update_whenValid_shouldReturnOk() throws Exception {
-    UserDto savedUser = toDto(factory.createRandomUser());
+    UserDto savedUser = toDto(userFactory.createAndSaveNewTestUser());
     MvcResult result = mockMvc.perform(
             post(UserApi.BASE + UserApi.ID, savedUser.getId()).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testUserDto))).andExpect(status().isOk())
@@ -194,9 +196,9 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void activateUser_whenExist_shouldReturnOk() throws Exception {
-    User user = factory.createRandomUser();
+    User user = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
-            post(UserApi.BASE + UserApi.ACTIVATE, user.getId()).accept(MediaType.APPLICATION_JSON))
+            patch(UserApi.BASE + UserApi.ACTIVATE, user.getId()).accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         UserDto.class);
@@ -205,15 +207,15 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void activateUser_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(post(UserApi.BASE + UserApi.ACTIVATE, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(patch(UserApi.BASE + UserApi.ACTIVATE, 99L).accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
   @Test
   void deactivateUser_whenExist_shouldReturnOk() throws Exception {
-    User user = factory.createRandomUser();
+    User user = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
-            post(UserApi.BASE + UserApi.DEACTIVATE, user.getId()).accept(MediaType.APPLICATION_JSON))
+            patch(UserApi.BASE + UserApi.DEACTIVATE, user.getId()).accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         UserDto.class);
@@ -222,7 +224,23 @@ public class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void deactivateUser_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(post(UserApi.BASE + UserApi.DEACTIVATE, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(
+            patch(UserApi.BASE + UserApi.DEACTIVATE, 99L).accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void deleteUser_whenExists_shouldReturnNoContent() throws Exception {
+    User user = userFactory.createAndSaveNewTestUser();
+
+    mockMvc.perform(
+            delete(UserApi.BASE + UserApi.ID, user.getId()).accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void deleteUser_whenDoesNotExists_shouldReturnNotFound() throws Exception {
+    mockMvc.perform(delete(UserApi.BASE + UserApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 

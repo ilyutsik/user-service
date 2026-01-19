@@ -254,4 +254,25 @@ class PaymentCardServiceImplTest {
     verify(paymentCardRepository).findById(1L);
     verify(paymentCardRepository, never()).save(any());
   }
+
+  @Test
+  void delete_WhenCardExists_ShouldReturnVoid() {
+    when(paymentCardRepository.findById(1L)).thenReturn(Optional.of(paymentCard));
+
+    paymentCardServiceImpl.delete(1L);
+
+    verify(paymentCardRepository).findById(1L);
+    verify(paymentCardRepository).deleteById(1L);
+  }
+
+  @Test
+  void delete_WhenCardNotFound_ShouldThrowException() {
+    when(paymentCardRepository.findById(1L)).thenReturn(Optional.empty());
+
+    Assertions.assertThrows(PaymentCardNotFoundException.class,
+        () -> paymentCardServiceImpl.delete(1L));
+
+    verify(paymentCardRepository).findById(1L);
+    verify(paymentCardRepository, never()).deleteById(any());
+  }
 }

@@ -11,6 +11,7 @@ import com.innowise.userservice.service.UserService;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -53,7 +54,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  @CachePut(key = "#result.id")
+  @CachePut(value = "users", key = "#result.id")
   public UserDto updateById(Long id, UserDto newUserDto) {
     User updatedUser = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
     checkEmailUnique(newUserDto.getEmail());
@@ -66,7 +67,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  @CachePut(key = "#result.id")
+  @CachePut(value = "users", key = "#result.id")
   public UserDto activate(Long id) {
     User activeUser = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
     activeUser.setActive(true);
@@ -75,12 +76,19 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  @CachePut(key = "#result.id")
+  @CachePut(value = "users", key = "#result.id")
   public UserDto deactivate(Long id) {
     User deactivetedUser = userRepository.findById(id)
         .orElseThrow(() -> new UserNotFoundException(id));
     deactivetedUser.setActive(false);
     return toDto(userRepository.save(deactivetedUser));
+  }
+
+  @Override
+  @CacheEvict(value = "users", key = "#id")
+  public void delete(Long id) {
+    userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+    userRepository.deleteById(id);
   }
 
   private void checkEmailUnique(String email) {

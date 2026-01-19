@@ -192,4 +192,24 @@ class UserServiceImplTest {
     verify(userRepository).findById(1L);
     verify(userRepository, never()).save(any());
   }
+
+  @Test
+  void delete_WhenUserExists_ShouldReturnVoid() {
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+    userServiceImpl.delete(1L);
+
+    verify(userRepository).findById(1L);
+    verify(userRepository).deleteById(1L);
+  }
+
+  @Test
+  void delete_WhenUserNotFound_ShouldThrowException() {
+    when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+    Assertions.assertThrows(UserNotFoundException.class, () -> userServiceImpl.delete(1L));
+
+    verify(userRepository).findById(1L);
+    verify(userRepository, never()).deleteById(any());
+  }
 }

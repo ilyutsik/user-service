@@ -10,7 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,15 +58,21 @@ public class UserController {
     return ResponseEntity.ok(updatedUserDto);
   }
 
-  @PostMapping(UserApi.ACTIVATE)
+  @PatchMapping(UserApi.ACTIVATE)
   public ResponseEntity<UserDto> activate(@PathVariable(name = "id") Long id) {
     UserDto activatedUser = userServiceImpl.activate(id);
     return ResponseEntity.ok(activatedUser);
   }
 
-  @PostMapping(UserApi.DEACTIVATE)
+  @PatchMapping(UserApi.DEACTIVATE)
   public ResponseEntity<UserDto> deactivate(@PathVariable(name = "id") Long id) {
     UserDto deactivatedUser = userServiceImpl.deactivate(id);
     return ResponseEntity.ok(deactivatedUser);
+  }
+
+  @DeleteMapping(UserApi.ID)
+  public ResponseEntity<Void> delete(@PathVariable(name = "id") Long id) {
+    userServiceImpl.delete(id);
+    return ResponseEntity.noContent().build();
   }
 }

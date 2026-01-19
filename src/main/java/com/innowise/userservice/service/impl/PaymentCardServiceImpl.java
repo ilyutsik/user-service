@@ -106,6 +106,12 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     return toDto(paymentCardRepository.save(deactivatedCard));
   }
 
+  @Override
+  public void delete(Long id) {
+    paymentCardRepository.findById(id).orElseThrow(() -> new PaymentCardNotFoundException(id));
+    paymentCardRepository.deleteById(id);
+  }
+
   private PaymentCardDto toDto(PaymentCard paymentCard) {
     return paymentCardMapper.toDto(paymentCard);
   }

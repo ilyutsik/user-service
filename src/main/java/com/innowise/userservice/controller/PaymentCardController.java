@@ -9,7 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,15 +61,21 @@ public class PaymentCardController {
     return ResponseEntity.ok(updatedCardDto);
   }
 
-  @PostMapping(CardApi.ACTIVATE)
+  @PatchMapping(CardApi.ACTIVATE)
   public ResponseEntity<PaymentCardDto> activate(@PathVariable(name = "id") Long id) {
     PaymentCardDto activatedCard = paymentCardServiceImpl.activate(id);
     return ResponseEntity.ok(activatedCard);
   }
 
-  @PostMapping(CardApi.DEACTIVATE)
+  @PatchMapping(CardApi.DEACTIVATE)
   public ResponseEntity<PaymentCardDto> deactivate(@PathVariable(name = "id") Long id) {
     PaymentCardDto deactivatedCard = paymentCardServiceImpl.deactivate(id);
     return ResponseEntity.ok(deactivatedCard);
+  }
+
+  @DeleteMapping(CardApi.ID)
+  public ResponseEntity<Void> delete(@PathVariable(name = "id") Long id) {
+    paymentCardServiceImpl.delete(id);
+    return ResponseEntity.noContent().build();
   }
 }

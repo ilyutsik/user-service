@@ -16,4 +16,6 @@ public interface UserService {
   UserDto activate(Long id);
 
   UserDto deactivate(Long id);
+
+  void delete(Long id);
 }

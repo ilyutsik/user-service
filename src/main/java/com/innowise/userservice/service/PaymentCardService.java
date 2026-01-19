@@ -19,4 +19,6 @@ public interface PaymentCardService {
   PaymentCardDto activate(Long id);
 
   PaymentCardDto deactivate(Long id);
+
+  void delete(Long id);
 }

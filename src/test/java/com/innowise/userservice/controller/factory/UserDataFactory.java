@@ -17,15 +17,15 @@ public class UserDataFactory {
     this.userRepository = userRepository;
   }
 
-  public User createRandomUser() {
+  public User createAndSaveNewTestUser() {
     String name = "User" + userCounter.incrementAndGet();
     String surname = "Popov" + userCounter.get();
     String email = "user" + userCounter.get() + "@test.com";
     LocalDate birth = LocalDate.of(2000, 1, 1);
-    return createUser(name, surname, email, birth);
+    return saveTestUser(name, surname, email, birth);
   }
 
-  public User createUser(String name, String surname, String email, LocalDate birthDate) {
+  private User saveTestUser(String name, String surname, String email, LocalDate birthDate) {
     User user = new User();
     user.setName(name);
     user.setSurname(surname);
