@@ -82,19 +82,22 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker images
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          docker build \
-            -t $DOCKER_USERNAME/userservice:main-latest \
-            -t $DOCKER_USERNAME/userservice:$COMMIT_SHA \
-            -f Dockerfile .
-          
-          docker push $DOCKER_USERNAME/userservice:main-latest
-          docker push $DOCKER_USERNAME/userservice:$COMMIT_SHA
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT_CI }}
 
 
-
-  
+      - name: Build and push Docker images in Docker Hub and GitHub Container Registry
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/userservice:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/userservice:main-latest
