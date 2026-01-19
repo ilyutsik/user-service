@@ -6,8 +6,8 @@ plugins {
     id "org.sonarqube" version "7.2.2.6593"
 }
 
-group = 'org.ilyutsik'
-version = '1.0-SNAPSHOT'
+group = 'com.innowise'
+version = '1.0.0'
 
 repositories {
     mavenCentral()
