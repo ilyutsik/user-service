@@ -24,23 +24,25 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_user_surname_name", columnList = "surname, name")})
+    @Index(name = "idx_user_surname_name", columnList = "surname, name"),
+    @Index(name = "idx_user_email", columnList = "email")
+})
 public class User extends Auditable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 50)
   private String name;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 50)
   private String surname;
 
   @Column(name = "birth_date", nullable = false)
   private LocalDate birthDate;
 
-  @Column(nullable = false, unique = true)
+  @Column(nullable = false, unique = true, length = 100)
   private String email;
 
   @Column(nullable = false)

@@ -2,13 +2,17 @@ package com.innowise.userservice.service.impl;
 
 import com.innowise.userservice.exception.UserAlreadyExistsException;
 import com.innowise.userservice.exception.UserNotFoundException;
+import com.innowise.userservice.mapper.PaymentCardMapper;
 import com.innowise.userservice.mapper.UserMapper;
+import com.innowise.userservice.model.dto.PaymentCardDto;
 import com.innowise.userservice.model.dto.UserDto;
+import com.innowise.userservice.model.entity.PaymentCard;
 import com.innowise.userservice.model.entity.User;
+import com.innowise.userservice.repository.PaymentCardRepository;
 import com.innowise.userservice.repository.UserRepository;
 import com.innowise.userservice.repository.UserSpecifications;
 import com.innowise.userservice.service.UserService;
-import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,67 +25,73 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 @Service
 @RequiredArgsConstructor
 @CacheConfig(cacheNames = "users")
+@Transactional
 public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
+  private final PaymentCardRepository cardRepository;
   private final UserMapper userMapper;
+  private final PaymentCardMapper cardMapper;
 
   @Override
   @CachePut(value = "users", key = "#result.id")
   public UserDto create(UserDto userDto) {
     checkEmailUnique(userDto.getEmail());
-    return toDto(userRepository.save(toEntity(userDto)));
+    return userToDto(userRepository.save(userDtoToEntity(userDto)));
   }
 
   @Override
+  @Transactional(readOnly = true)
   @Cacheable(value = "users", key = "#id")
   public UserDto getById(Long id) {
     User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-    return toDto(user);
+    return userToDto(user);
   }
 
   @Override
+  @Transactional(readOnly = true)
   public Page<UserDto> getAll(int page, int size, String name, String surname) {
     Specification<User> spec = UserSpecifications.isActive().and(UserSpecifications.hasName(name))
         .and(UserSpecifications.hasSurname(surname));
 
     Pageable pageable = PageRequest.of(page, size);
-    return userRepository.findAll(spec, pageable).map(this::toDto);
+    return userRepository.findAll(spec, pageable).map(this::userToDto);
   }
 
   @Override
-  @Transactional
   @CachePut(value = "users", key = "#result.id")
   public UserDto updateById(Long id, UserDto newUserDto) {
     User updatedUser = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-    checkEmailUnique(newUserDto.getEmail());
+    userRepository.findByEmail(newUserDto.getEmail()).ifPresent(user -> {
+      if (!user.getId().equals(id)) {
+        throw UserAlreadyExistsException.withEmail(newUserDto.getEmail());
+      }
+    });
     updatedUser.setName(newUserDto.getName());
     updatedUser.setSurname(newUserDto.getSurname());
     updatedUser.setEmail(newUserDto.getEmail());
-    updatedUser.setBirthDate(LocalDate.parse(newUserDto.getBirthDate()));
-    return toDto(userRepository.save(updatedUser));
+    updatedUser.setBirthDate(newUserDto.getBirthDate());
+    return userToDto(userRepository.save(updatedUser));
   }
 
   @Override
-  @Transactional
+  @Transactional(readOnly = true)
+  public List<PaymentCardDto> getCardsByUserId(Long userId) {
+    userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+    List<PaymentCard> cardList = cardRepository.findByUserIdAndActiveTrue(userId);
+    return cardList.stream().map(this::cardToDto).toList();
+  }
+
+  @Override
   @CachePut(value = "users", key = "#result.id")
-  public UserDto activate(Long id) {
+  public UserDto setActive(Long id, boolean active) {
     User activeUser = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-    activeUser.setActive(true);
-    return toDto(userRepository.save(activeUser));
-  }
-
-  @Override
-  @Transactional
-  @CachePut(value = "users", key = "#result.id")
-  public UserDto deactivate(Long id) {
-    User deactivetedUser = userRepository.findById(id)
-        .orElseThrow(() -> new UserNotFoundException(id));
-    deactivetedUser.setActive(false);
-    return toDto(userRepository.save(deactivetedUser));
+    activeUser.setActive(active);
+    return userToDto(userRepository.save(activeUser));
   }
 
   @Override
@@ -97,11 +107,15 @@ public class UserServiceImpl implements UserService {
     });
   }
 
-  private User toEntity(UserDto userDto) {
+  private User userDtoToEntity(UserDto userDto) {
     return userMapper.toEntity(userDto);
   }
 
-  private UserDto toDto(User user) {
+  private UserDto userToDto(User user) {
     return userMapper.toDto(user);
+  }
+
+  private PaymentCardDto cardToDto(PaymentCard paymentCard) {
+    return cardMapper.toDto(paymentCard);
   }
 }

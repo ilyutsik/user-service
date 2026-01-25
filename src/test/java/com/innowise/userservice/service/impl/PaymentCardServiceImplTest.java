@@ -69,14 +69,14 @@ class PaymentCardServiceImplTest {
     paymentCard = new PaymentCard();
     paymentCard.setId(1L);
     paymentCard.setHolder("Andrei");
-    paymentCard.setNumber(12L);
+    paymentCard.setNumber("1234567891234567");
     paymentCard.setExpirationDate(LocalDate.of(2003, 9, 20));
     paymentCard.setUser(user);
 
     paymentCard2 = new PaymentCard();
     paymentCard2.setId(1L);
     paymentCard2.setHolder("Valera");
-    paymentCard2.setNumber(12L);
+    paymentCard2.setNumber("1234567891234567");
     paymentCard2.setExpirationDate(LocalDate.of(2003, 9, 20));
     paymentCard2.setUser(user);
 
@@ -84,8 +84,8 @@ class PaymentCardServiceImplTest {
     paymentCardDto.setId(1L);
     paymentCardDto.setUserId(user.getId());
     paymentCardDto.setHolder("Andrei");
-    paymentCardDto.setNumber(12L);
-    paymentCardDto.setExpirationDate("2003-09-20");
+    paymentCardDto.setNumber("1234567891234567");
+    paymentCardDto.setExpirationDate(LocalDate.now());
 
     List<PaymentCard> paymentCardDtoList = List.of(paymentCard);
 
@@ -152,7 +152,7 @@ class PaymentCardServiceImplTest {
     assertThat(result).isNotNull();
     assertThat(result.getTotalElements()).isEqualTo(1);
     assertThat(result.getContent()).hasSize(1);
-    assertThat(result.getContent().get(0).getNumber()).isEqualTo(12L);
+    assertThat(result.getContent().get(0).getHolder()).isEqualTo("Andrei");
 
     verify(paymentCardRepository).findAll(any(Pageable.class));
   }
@@ -170,48 +170,12 @@ class PaymentCardServiceImplTest {
   }
 
   @Test
-  void getAllByUserId_ShouldReturnActiveCards() {
-    when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
-    when(paymentCardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(
-        List.of(paymentCard, paymentCard2));
-
-    List<PaymentCardDto> result = paymentCardServiceImpl.getAllByUserId(1L);
-
-    assertThat(result).hasSize(2);
-    assertThat(result.get(1).getHolder()).isEqualTo("Valera");
-
-    verify(paymentCardRepository).findByUserIdAndActiveTrue(1L);
-  }
-
-  @Test
-  void getAllByUserId_WhenNoCards_ShouldReturnEmptyList() {
-    when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
-    when(paymentCardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(List.of());
-
-    List<PaymentCardDto> result = paymentCardServiceImpl.getAllByUserId(1L);
-
-    assertThat(result).isEmpty();
-
-    verify(paymentCardRepository).findByUserIdAndActiveTrue(1L);
-  }
-
-  @Test
-  void getAllByUserId_WhenUserNotFound_ShouldThrowException() {
-    when(userRepository.findById(any(Long.class))).thenReturn(Optional.empty());
-
-    var userId = user.getId();
-
-    Assertions.assertThrows(UserNotFoundException.class,
-        () -> paymentCardServiceImpl.getAllByUserId(userId));
-  }
-
-  @Test
-  void activate_ShouldReturnActivatedPaymentCard() {
+  void setActiveTrue_ShouldReturnActivatedPaymentCard() {
     when(paymentCardRepository.findById(1L)).thenReturn(Optional.of(paymentCard));
     when(paymentCardRepository.save(any(PaymentCard.class))).thenAnswer(
         invocation -> invocation.getArgument(0));
 
-    PaymentCardDto activatedUser = paymentCardServiceImpl.activate(1L);
+    PaymentCardDto activatedUser = paymentCardServiceImpl.setActive(1L, true);
 
     assertThat(activatedUser.getActive()).isTrue();
 
@@ -220,39 +184,28 @@ class PaymentCardServiceImplTest {
   }
 
   @Test
-  void activate_WhenPaymentCardNotFound_ShouldThrowException() {
+  void setActive_WhenPaymentCardNotFound_ShouldThrowException() {
     when(paymentCardRepository.findById(1L)).thenReturn(Optional.empty());
 
     Assertions.assertThrows(PaymentCardNotFoundException.class,
-        () -> paymentCardServiceImpl.activate(1L));
+        () -> paymentCardServiceImpl.setActive(1L, true));
 
     verify(paymentCardRepository).findById(1L);
     verify(paymentCardRepository, never()).save(any());
   }
 
   @Test
-  void deactivate_ShouldReturnDeactivatedPaymentCard() {
+  void setActiveFalse_ShouldReturnDeactivatedPaymentCard() {
     when(paymentCardRepository.findById(1L)).thenReturn(Optional.of(paymentCard));
     when(paymentCardRepository.save(any(PaymentCard.class))).thenAnswer(
         invocation -> invocation.getArgument(0));
 
-    PaymentCardDto deactivatedUser = paymentCardServiceImpl.deactivate(1L);
+    PaymentCardDto deactivatedUser = paymentCardServiceImpl.setActive(1L, false);
 
     assertThat(deactivatedUser.getActive()).isFalse();
 
     verify(paymentCardRepository).findById(1L);
     verify(paymentCardRepository).save(paymentCard);
-  }
-
-  @Test
-  void deactivate_WhenPaymentCardNotFound_ShouldThrowException() {
-    when(paymentCardRepository.findById(1L)).thenReturn(Optional.empty());
-
-    Assertions.assertThrows(PaymentCardNotFoundException.class,
-        () -> paymentCardServiceImpl.deactivate(1L));
-
-    verify(paymentCardRepository).findById(1L);
-    verify(paymentCardRepository, never()).save(any());
   }
 
   @Test

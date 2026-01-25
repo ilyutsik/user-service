@@ -34,10 +34,10 @@ public class PaymentCard extends Auditable {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @Column(nullable = false)
-  private Long number;
+  @Column(nullable = false, length = 16)
+  private String number;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 50)
   private String holder;
 
   @Column(name = "expiration_date", nullable = false)

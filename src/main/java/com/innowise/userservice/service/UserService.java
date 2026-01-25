@@ -1,6 +1,8 @@
 package com.innowise.userservice.service;
 
+import com.innowise.userservice.model.dto.PaymentCardDto;
 import com.innowise.userservice.model.dto.UserDto;
+import java.util.List;
 import org.springframework.data.domain.Page;
 
 public interface UserService {
@@ -13,9 +15,9 @@ public interface UserService {
 
   UserDto updateById(Long id, UserDto newUserDto);
 
-  UserDto activate(Long id);
+  List<PaymentCardDto> getCardsByUserId(Long userId);
 
-  UserDto deactivate(Long id);
+  UserDto setActive(Long id, boolean active);
 
   void delete(Long id);
 }

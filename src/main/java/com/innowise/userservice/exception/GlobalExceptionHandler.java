@@ -1,7 +1,10 @@
 package com.innowise.userservice.exception;
 
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,17 +41,24 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponse> handleValidationException(
+  public ResponseEntity<ErrorResponseValidation> handleValidationException(
       MethodArgumentNotValidException ex) {
-    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
-        "Validation Failed", "Fields Are Incorrect");
-    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+
+    Map<String, String> errors = ex.getBindingResult()
+        .getFieldErrors()
+        .stream()
+        .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage,
+            (msg1, msg2) -> msg1 + "; " + msg2));
+
+    ErrorResponseValidation response = new ErrorResponseValidation(HttpStatus.BAD_REQUEST.value(),
+        "Validation Failed", errors);
+    return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleException(Exception ex) {
-    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(),
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(),
         "Internal ServerError", ex.getMessage());
-    return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }

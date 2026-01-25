@@ -9,10 +9,15 @@ import static org.mockito.Mockito.when;
 
 import com.innowise.userservice.exception.UserAlreadyExistsException;
 import com.innowise.userservice.exception.UserNotFoundException;
+import com.innowise.userservice.mapper.PaymentCardMapper;
 import com.innowise.userservice.mapper.UserMapper;
+import com.innowise.userservice.model.dto.PaymentCardDto;
 import com.innowise.userservice.model.dto.UserDto;
+import com.innowise.userservice.model.entity.PaymentCard;
 import com.innowise.userservice.model.entity.User;
+import com.innowise.userservice.repository.PaymentCardRepository;
 import com.innowise.userservice.repository.UserRepository;
+import com.innowise.userservice.service.PaymentCardService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -36,18 +41,28 @@ class UserServiceImplTest {
 
   @Mock
   private UserRepository userRepository;
+
+  @Mock
+  private PaymentCardRepository cardRepository;
   @Spy
   private UserMapper userMapper = Mappers.getMapper(UserMapper.class);
+
+  @Spy
+  private PaymentCardMapper cardMapper = Mappers.getMapper(PaymentCardMapper.class);
   @Mock
-  private PaymentCardServiceImpl paymentCardServiceImpl;
+  private PaymentCardService paymentCardService;
 
   @InjectMocks
-  private UserServiceImpl userServiceImpl;
+  private UserServiceImpl userService;
 
   private User user;
   private UserDto userDto;
 
   private Page<User> userPage;
+
+  private PaymentCard paymentCard;
+
+  private PaymentCard paymentCard2;
 
   @BeforeEach
   void setUp() {
@@ -65,8 +80,16 @@ class UserServiceImplTest {
     userDto.setName("Andrei");
     userDto.setSurname("Ilyutsik");
     userDto.setEmail("test@mail.com");
-    userDto.setBirthDate("2000-01-01");
+    userDto.setBirthDate(LocalDate.parse("2001-01-01"));
     userDto.setActive(true);
+
+    paymentCard = new PaymentCard();
+    paymentCard.setId(1L);
+    paymentCard.setUser(user);
+
+    paymentCard2 = new PaymentCard();
+    paymentCard2.setId(1L);
+    paymentCard2.setUser(user);
 
     List<User> userList = List.of(user);
     userPage = new PageImpl<>(userList, PageRequest.of(0, 10), userList.size());
@@ -76,7 +99,7 @@ class UserServiceImplTest {
   void create_WhenUserDoesNotExists_ShouldSaveAndReturnDto() {
     when(userRepository.save(any(User.class))).thenReturn(user);
 
-    UserDto result = userServiceImpl.create(userDto);
+    UserDto result = userService.create(userDto);
 
     assertThat(result.getId()).isEqualTo(1L);
     verify(userRepository).save(any(User.class));
@@ -87,14 +110,14 @@ class UserServiceImplTest {
     when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
 
     Assertions.assertThrows(UserAlreadyExistsException.class,
-        () -> userServiceImpl.create(userDto));
+        () -> userService.create(userDto));
   }
 
   @Test
   void getById_WhenExists_ShouldReturnUser() {
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-    UserDto result = userServiceImpl.getById(1L);
+    UserDto result = userService.getById(1L);
 
     assertThat(result.getEmail()).isEqualTo("test@mail.com");
   }
@@ -102,7 +125,7 @@ class UserServiceImplTest {
   @Test
   void getById_UserNotFond_ShouldThrowException() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> userServiceImpl.getById(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> userService.getById(1L)).isInstanceOf(UserNotFoundException.class);
   }
 
   @Test
@@ -110,7 +133,7 @@ class UserServiceImplTest {
     when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(
         userPage);
 
-    Page<UserDto> page = userServiceImpl.getAll(0, 10, "", "");
+    Page<UserDto> page = userService.getAll(0, 10, "", "");
 
     assertThat(page.get().findFirst().get().getSurname()).isEqualTo("Ilyutsik");
   }
@@ -122,7 +145,7 @@ class UserServiceImplTest {
     when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.empty());
 
     userDto.setName("Valera");
-    UserDto result = userServiceImpl.updateById(1L, userDto);
+    UserDto result = userService.updateById(1L, userDto);
 
     assertThat(result.getName()).isEqualTo("Valera");
     verify(userRepository).save(any(User.class));
@@ -133,26 +156,64 @@ class UserServiceImplTest {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
     Assertions.assertThrows(UserNotFoundException.class,
-        () -> userServiceImpl.updateById(1L, userDto));
+        () -> userService.updateById(1L, userDto));
     verify(userRepository).findById(1L);
   }
 
   @Test
   void updateById_WhenEmailExists_ShouldThrowException() {
+    User otherUser = new User();
+    otherUser.setId(2L);
+    otherUser.setEmail("test@mail.com");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-    when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
+    when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(otherUser));
     Assertions.assertThrows(UserAlreadyExistsException.class,
-        () -> userServiceImpl.updateById(1L, userDto));
+        () -> userService.updateById(1L, userDto));
     verify(userRepository).findById(1L);
     verify(userRepository).findByEmail(userDto.getEmail());
   }
 
   @Test
-  void activate_WhenUserExists_ShouldReturnActivatedUser() {
+  void getCardsByUserId_ShouldReturnActiveCards() {
+    when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
+    when(cardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(
+        List.of(paymentCard, paymentCard2));
+
+    List<PaymentCardDto> result = userService.getCardsByUserId(1L);
+
+    assertThat(result).hasSize(2);
+
+    verify(cardRepository).findByUserIdAndActiveTrue(1L);
+  }
+
+  @Test
+  void getCardsByUserId_WhenNoCards_ShouldReturnEmptyList() {
+    when(userRepository.findById(any(Long.class))).thenReturn(Optional.ofNullable(user));
+    when(cardRepository.findByUserIdAndActiveTrue(1L)).thenReturn(List.of());
+
+    List<PaymentCardDto> result = userService.getCardsByUserId(1L);
+
+    assertThat(result).isEmpty();
+
+    verify(cardRepository).findByUserIdAndActiveTrue(1L);
+  }
+
+  @Test
+  void getCardsByUserId_WhenUserNotFound_ShouldThrowException() {
+    when(userRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+
+    var userId = user.getId();
+
+    Assertions.assertThrows(UserNotFoundException.class,
+        () -> userService.getCardsByUserId(userId));
+  }
+
+  @Test
+  void setActiveTrue_WhenUserExists_ShouldReturnActivatedUser() {
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    UserDto activatedUser = userServiceImpl.activate(1L);
+    UserDto activatedUser = userService.setActive(1L, true);
 
     assertThat(activatedUser.getActive()).isTrue();
 
@@ -161,21 +222,21 @@ class UserServiceImplTest {
   }
 
   @Test
-  void activate_WhenUserNotFound_ShouldThrowException() {
+  void setActive_WhenUserNotFound_ShouldThrowException() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-    Assertions.assertThrows(UserNotFoundException.class, () -> userServiceImpl.activate(1L));
+    Assertions.assertThrows(UserNotFoundException.class, () -> userService.setActive(1L, true));
 
     verify(userRepository).findById(1L);
     verify(userRepository, never()).save(any());
   }
 
   @Test
-  void deactivate_WhenUserExists_ShouldReturnDeactivatedUser() {
+  void setActiveFalse_WhenUserExists_ShouldReturnDeactivatedUser() {
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    UserDto activatedUser = userServiceImpl.deactivate(1L);
+    UserDto activatedUser = userService.setActive(1L, false);
 
     assertThat(activatedUser.getActive()).isFalse();
 
@@ -184,20 +245,10 @@ class UserServiceImplTest {
   }
 
   @Test
-  void deactivate_WhenUserNotFound_ShouldThrowException() {
-    when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-    Assertions.assertThrows(UserNotFoundException.class, () -> userServiceImpl.deactivate(1L));
-
-    verify(userRepository).findById(1L);
-    verify(userRepository, never()).save(any());
-  }
-
-  @Test
   void delete_WhenUserExists_ShouldReturnVoid() {
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-    userServiceImpl.delete(1L);
+    userService.delete(1L);
 
     verify(userRepository).findById(1L);
     verify(userRepository).deleteById(1L);
@@ -207,7 +258,7 @@ class UserServiceImplTest {
   void delete_WhenUserNotFound_ShouldThrowException() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-    Assertions.assertThrows(UserNotFoundException.class, () -> userServiceImpl.delete(1L));
+    Assertions.assertThrows(UserNotFoundException.class, () -> userService.delete(1L));
 
     verify(userRepository).findById(1L);
     verify(userRepository, never()).deleteById(any());
