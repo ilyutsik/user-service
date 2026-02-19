@@ -28,18 +28,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@SpringBootTest
 @ActiveProfiles("test")
-@AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class PaymentCardControllerTest extends IntegrationTestBase {
 
   private static final String PAGE = "page";
@@ -192,11 +190,9 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   @Test
   void activateCard_whenExist_shouldReturnOk() throws Exception {
     MvcResult result = mockMvc.perform(
-            patch(CardApi.BASE + CardApi.ID, testCard.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(activePatchDto))
-                .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk()).andReturn();
+        patch(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(activePatchDto))
+            .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         PaymentCardDto.class);
     assertThat(fetched.getActive()).isTrue();
@@ -204,22 +200,18 @@ class PaymentCardControllerTest extends IntegrationTestBase {
 
   @Test
   void activateCard_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(patch(CardApi.BASE + CardApi.ID, 99L)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(activePatchDto))
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isNotFound());
+    mockMvc.perform(patch(CardApi.BASE + CardApi.ID, 99L).contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(activePatchDto))
+        .accept(MediaType.APPLICATION_JSON)).andExpect(status().isNotFound());
   }
 
   @Test
   void deactivateCard_whenExist_shouldReturnOk() throws Exception {
     activePatchDto.setActive(false);
     MvcResult result = mockMvc.perform(
-        patch(CardApi.BASE + CardApi.ID, testCard.getId())
-            .contentType(MediaType.APPLICATION_JSON)
+        patch(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(activePatchDto))
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk()).andReturn();
+            .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         PaymentCardDto.class);
     assertThat(fetched.getActive()).isFalse();

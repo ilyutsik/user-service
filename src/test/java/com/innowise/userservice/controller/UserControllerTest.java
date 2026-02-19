@@ -3,9 +3,9 @@ package com.innowise.userservice.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -23,22 +23,19 @@ import com.innowise.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@SpringBootTest
 @ActiveProfiles("test")
-@AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class UserControllerTest extends IntegrationTestBase {
 
   private static final String NAME = "name";
@@ -46,6 +43,7 @@ class UserControllerTest extends IntegrationTestBase {
 
   private static final String PAGE = "page";
   private static final String SIZE = "size";
+  User testUser;
   private UserDto testUserDto;
   private UserActivePatchDto activePatchDto;
   @Autowired
@@ -62,8 +60,6 @@ class UserControllerTest extends IntegrationTestBase {
   private UserMapper userMapper;
   @Autowired
   private ObjectMapper objectMapper;
-
-  User testUser;
 
   @BeforeEach
   void setUp() {
@@ -84,11 +80,6 @@ class UserControllerTest extends IntegrationTestBase {
     activePatchDto.setActive(true);
   }
 
-  @AfterEach
-  void clearDb() {
-    userRepository.deleteAll();
-  }
-
   private void assertCache(UserDto userDto) {
     Cache cache = cacheManager.getCache("users");
     Object cached = cache.get(userDto.getId()).get();
@@ -97,7 +88,6 @@ class UserControllerTest extends IntegrationTestBase {
 
     Assertions.assertThat(cachedDto).isEqualTo(userDto);
   }
-
 
   @Test
   void create_whenValidUser_shouldReturnCreated() throws Exception {
@@ -133,6 +123,24 @@ class UserControllerTest extends IntegrationTestBase {
   @Test
   void userById_whenDoesNotExist_shouldReturnNotFound() throws Exception {
     mockMvc.perform(get(UserApi.BASE + UserApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void userByEmail_whenExist_shouldReturnUser() throws Exception {
+    UserDto userDto = toDto(userFactory.createAndSaveNewTestUser());
+    MvcResult result = mockMvc.perform(
+            get(UserApi.BASE + UserApi.EMAIL, userDto.getEmail()).accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk()).andReturn();
+    UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
+        UserDto.class);
+    assertThat(fetched.getName()).isEqualTo(userDto.getName());
+  }
+
+  @Test
+  void userByEmail_whenDoesNotExist_shouldReturnNotFound() throws Exception {
+    mockMvc.perform(get(UserApi.BASE + UserApi.EMAIL, "notpresentemail@test.com").accept(
+            MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
@@ -245,10 +253,10 @@ class UserControllerTest extends IntegrationTestBase {
   @Test
   void activateUser_whenDoesNotExist_shouldReturnNotFound() throws Exception {
     mockMvc.perform(
-        patch(UserApi.BASE + UserApi.ID, 99L)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(activePatchDto))
-            .accept(MediaType.APPLICATION_JSON))
+            patch(UserApi.BASE + UserApi.ID, 99L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(activePatchDto))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
@@ -257,10 +265,10 @@ class UserControllerTest extends IntegrationTestBase {
     activePatchDto.setActive(false);
     User user = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
-        patch(UserApi.BASE + UserApi.ID, user.getId())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(activePatchDto))
-            .accept(MediaType.APPLICATION_JSON))
+            patch(UserApi.BASE + UserApi.ID, user.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(activePatchDto))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         UserDto.class);

@@ -8,4 +8,5 @@ public final class UserApi {
   public static final String BASE = "/api/v1/users";
   public static final String ID = "/{id}";
   public static final String CARDS = "/{id}/cards";
+  public static final String EMAIL = "/email/{email}";
 }

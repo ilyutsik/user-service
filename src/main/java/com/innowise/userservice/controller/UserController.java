@@ -5,6 +5,7 @@ import com.innowise.userservice.model.dto.UserActivePatchDto;
 import com.innowise.userservice.model.dto.UserDto;
 import com.innowise.userservice.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,12 @@ public class UserController {
     return ResponseEntity.ok(userDto);
   }
 
+  @GetMapping(UserApi.EMAIL)
+  public ResponseEntity<UserDto> getByEmail(@PathVariable(name = "email") @Email String email) {
+    UserDto userDto = userService.getByEmail(email);
+    return ResponseEntity.ok(userDto);
+  }
+
   @GetMapping
   public ResponseEntity<Page<UserDto>> getAll(
       @RequestParam(name = "page", defaultValue = "0") int page,
@@ -60,8 +67,7 @@ public class UserController {
   }
 
   @GetMapping(UserApi.CARDS)
-  public ResponseEntity<List<PaymentCardDto>> getCardsByUserId(
-      @PathVariable(name = "id") Long id) {
+  public ResponseEntity<List<PaymentCardDto>> getCardsByUserId(@PathVariable(name = "id") Long id) {
     List<PaymentCardDto> cards = userService.getCardsByUserId(id);
     return ResponseEntity.ok(cards);
   }
