@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    hikari:
+      initialization-fail-timeout: 0
+  redis:
+    lettuce:
+      shutdown-timeout: 0
+  application:
+    name: user-service-test
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+  liquibase:
+    enabled: false
