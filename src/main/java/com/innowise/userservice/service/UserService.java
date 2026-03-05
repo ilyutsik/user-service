@@ -11,6 +11,8 @@ public interface UserService {
 
   UserDto getById(Long id);
 
+  UserDto getByEmail(String email);
+
   Page<UserDto> getAll(int page, int size, String name, String surname);
 
   UserDto updateById(Long id, UserDto newUserDto);

@@ -54,6 +54,13 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional(readOnly = true)
+  public UserDto getByEmail(String email) {
+    User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException(email));
+    return userToDto(user);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public Page<UserDto> getAll(int page, int size, String name, String surname) {
     Specification<User> spec = UserSpecifications.isActive().and(UserSpecifications.hasName(name))
         .and(UserSpecifications.hasSurname(surname));

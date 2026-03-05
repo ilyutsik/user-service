@@ -129,6 +129,21 @@ class UserServiceImplTest {
   }
 
   @Test
+  void getByEmail_WhenExists_ShouldReturnUser() {
+    when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+    UserDto result = userService.getByEmail(user.getEmail());
+
+    assertThat(result.getEmail()).isEqualTo("test@mail.com");
+  }
+
+  @Test
+  void getByEmail_UserNotFond_ShouldThrowException() {
+    when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> userService.getByEmail(user.getEmail())).isInstanceOf(UserNotFoundException.class);
+  }
+
+  @Test
   void getAll_WhenUsersExists_ShouldReturnUsers() {
     when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(
         userPage);
