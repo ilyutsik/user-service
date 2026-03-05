@@ -1,5 +1,7 @@
 package com.innowise.userservice.controller;
 
+import com.innowise.userservice.config.security.annotation.AdminOnly;
+import com.innowise.userservice.config.security.annotation.OwnerOrAdmin;
 import com.innowise.userservice.model.dto.PaymentCardDto;
 import com.innowise.userservice.model.dto.UserActivePatchDto;
 import com.innowise.userservice.model.dto.UserDto;
@@ -30,24 +32,27 @@ public class UserController {
 
   private final UserService userService;
 
-  @PostMapping()
+  @PostMapping
   public ResponseEntity<UserDto> create(@Valid @RequestBody UserDto userDto) {
     UserDto createdDto = userService.create(userDto);
     return ResponseEntity.status(HttpStatus.CREATED).body(createdDto);
   }
 
+  @OwnerOrAdmin
   @GetMapping(UserApi.ID)
   public ResponseEntity<UserDto> getById(@PathVariable(name = "id") Long id) {
     UserDto userDto = userService.getById(id);
     return ResponseEntity.ok(userDto);
   }
 
+  @AdminOnly
   @GetMapping(UserApi.EMAIL)
   public ResponseEntity<UserDto> getByEmail(@PathVariable(name = "email") @Email String email) {
     UserDto userDto = userService.getByEmail(email);
     return ResponseEntity.ok(userDto);
   }
 
+  @AdminOnly
   @GetMapping
   public ResponseEntity<Page<UserDto>> getAll(
       @RequestParam(name = "page", defaultValue = "0") int page,
@@ -58,6 +63,7 @@ public class UserController {
     return ResponseEntity.ok(pages);
   }
 
+  @OwnerOrAdmin
   @PutMapping(UserApi.ID)
   public ResponseEntity<UserDto> update(@PathVariable(name = "id") Long id,
       @Validated @RequestBody UserDto userDto) {
@@ -66,12 +72,14 @@ public class UserController {
     return ResponseEntity.ok(updatedUserDto);
   }
 
+  @OwnerOrAdmin
   @GetMapping(UserApi.CARDS)
   public ResponseEntity<List<PaymentCardDto>> getCardsByUserId(@PathVariable(name = "id") Long id) {
     List<PaymentCardDto> cards = userService.getCardsByUserId(id);
     return ResponseEntity.ok(cards);
   }
 
+  @AdminOnly
   @PatchMapping(UserApi.ID)
   public ResponseEntity<UserDto> active(@PathVariable(name = "id") Long id,
       @Valid @RequestBody UserActivePatchDto dto) {
@@ -79,6 +87,7 @@ public class UserController {
     return ResponseEntity.ok(activatedUser);
   }
 
+  @OwnerOrAdmin
   @DeleteMapping(UserApi.ID)
   public ResponseEntity<Void> delete(@PathVariable(name = "id") Long id) {
     userService.delete(id);

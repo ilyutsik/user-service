@@ -11,6 +11,6 @@ public class ErrorResponse {
 
   private String error;
 
-  private String massage;
+  private String message;
 }
 
