@@ -72,7 +72,6 @@ jacocoTestReport {
         xml.required = true
         html.required = true
     }
-
 }
 
 sonarqube {
