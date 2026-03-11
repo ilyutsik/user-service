@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -106,8 +107,12 @@ class PaymentCardControllerTest extends IntegrationTestBase {
 
   @Test
   void createCard_whenValidCard_shouldReturnCreated() throws Exception {
-    MvcResult result = mockMvc.perform(post(CardApi.BASE).contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(testCardDto))).andExpect(status().isCreated())
+    MvcResult result = mockMvc.perform(post(CardApi.BASE)
+            .with(user("admin").roles("ADMIN"))
+            .header("X-USER-ID", testCardDto.getUserId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(testCardDto)))
+        .andExpect(status().isCreated())
         .andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         PaymentCardDto.class);
@@ -118,8 +123,12 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   @Test
   void createCard_whenUserDoesNotExist_shouldReturnNotFound() throws Exception {
     testCardDto.setUserId(99L);
-    mockMvc.perform(post(CardApi.BASE).contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(testCardDto))).andExpect(status().isNotFound());
+    mockMvc.perform(post(CardApi.BASE)
+        .with(user("admin").roles("ADMIN"))
+            .header("X-USER-ID", testCardDto.getUserId())
+            .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(testCardDto)))
+        .andExpect(status().isNotFound());
   }
 
   @Test
@@ -127,14 +136,20 @@ class PaymentCardControllerTest extends IntegrationTestBase {
     for (int i = 2; i <= 5; i++) {
       cardFactory.createAndSaveNewTestCard(testUser);
     }
-    mockMvc.perform(post(CardApi.BASE).contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(testCardDto))).andExpect(status().isBadRequest());
+    mockMvc.perform(post(CardApi.BASE)
+        .with(user("admin").roles("ADMIN"))
+        .header("X-USER-ID", testCardDto.getUserId())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(testCardDto)))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   void getCardById_whenCardExist_shouldReturnCard() throws Exception {
     MvcResult result = mockMvc.perform(
-            get(CardApi.BASE + CardApi.ID, testCard.getId()).accept(MediaType.APPLICATION_JSON))
+            get(CardApi.BASE + CardApi.ID, testCard.getId())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         PaymentCardDto.class);
@@ -144,14 +159,18 @@ class PaymentCardControllerTest extends IntegrationTestBase {
 
   @Test
   void getCardById_whenCardDoesNotExist_shouldReturnNotFund() throws Exception {
-    mockMvc.perform(get(CardApi.BASE + CardApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(get(CardApi.BASE + CardApi.ID, 99L)
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
   @Test
   void getAllCards_shouldReturnCards() throws Exception {
     MvcResult result = mockMvc.perform(
-            get(CardApi.BASE).param(PAGE, "0").param(SIZE, "10").accept(MediaType.APPLICATION_JSON))
+            get(CardApi.BASE).param(PAGE, "0").param(SIZE, "10")
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
     List<PaymentCardDto> cards = objectMapper.readValue(root.get("content").toString(),
@@ -163,8 +182,12 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   @Test
   void updateCard_whenValid_shouldReturnOk() throws Exception {
     MvcResult result = mockMvc.perform(
-            put(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(testCardDto))).andExpect(status().isOk())
+            put(CardApi.BASE + CardApi.ID, testCard.getId())
+                .with(user("admin").roles("ADMIN"))
+                .header("X-USER-ID", testCardDto.getUserId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testCardDto)))
+        .andExpect(status().isOk())
         .andReturn();
     PaymentCardDto updated = objectMapper.readValue(result.getResponse().getContentAsString(),
         PaymentCardDto.class);
@@ -174,7 +197,10 @@ class PaymentCardControllerTest extends IntegrationTestBase {
 
   @Test
   void updateCard_whenCardDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(put(CardApi.BASE + CardApi.ID, 99L).contentType(MediaType.APPLICATION_JSON)
+    mockMvc.perform(put(CardApi.BASE + CardApi.ID, 99L)
+        .with(user("admin").roles("ADMIN"))
+        .header("X-USER-ID", testCardDto.getUserId())
+        .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(testCardDto))).andExpect(status().isNotFound());
   }
 
@@ -182,7 +208,10 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   void updateCard_whenUserDoesNotExist_shouldReturnNotFound() throws Exception {
     testCardDto.setUserId(99L);
     mockMvc.perform(
-            put(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
+            put(CardApi.BASE + CardApi.ID, testCard.getId())
+                .with(user("admin").roles("ADMIN"))
+                .header("X-USER-ID", testCardDto.getUserId())
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testCardDto)))
         .andExpect(status().isNotFound());
   }
@@ -190,7 +219,9 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   @Test
   void activateCard_whenExist_shouldReturnOk() throws Exception {
     MvcResult result = mockMvc.perform(
-        patch(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
+        patch(CardApi.BASE + CardApi.ID, testCard.getId())
+            .with(user("admin").roles("ADMIN"))
+            .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(activePatchDto))
             .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -200,7 +231,9 @@ class PaymentCardControllerTest extends IntegrationTestBase {
 
   @Test
   void activateCard_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(patch(CardApi.BASE + CardApi.ID, 99L).contentType(MediaType.APPLICATION_JSON)
+    mockMvc.perform(patch(CardApi.BASE + CardApi.ID, 99L)
+        .with(user("admin").roles("ADMIN"))
+        .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(activePatchDto))
         .accept(MediaType.APPLICATION_JSON)).andExpect(status().isNotFound());
   }
@@ -209,7 +242,9 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   void deactivateCard_whenExist_shouldReturnOk() throws Exception {
     activePatchDto.setActive(false);
     MvcResult result = mockMvc.perform(
-        patch(CardApi.BASE + CardApi.ID, testCard.getId()).contentType(MediaType.APPLICATION_JSON)
+        patch(CardApi.BASE + CardApi.ID, testCard.getId())
+            .with(user("admin").roles("ADMIN"))
+            .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(activePatchDto))
             .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
     PaymentCardDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -220,13 +255,17 @@ class PaymentCardControllerTest extends IntegrationTestBase {
   @Test
   void deleteCard_whenExists_shouldReturnNoContent() throws Exception {
     mockMvc.perform(
-            delete(CardApi.BASE + CardApi.ID, testCard.getId()).accept(MediaType.APPLICATION_JSON))
+            delete(CardApi.BASE + CardApi.ID, testCard.getId())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
   }
 
   @Test
   void deleteCard_whenDoesNotExists_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(delete(CardApi.BASE + CardApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(delete(CardApi.BASE + CardApi.ID, 99L)
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 }

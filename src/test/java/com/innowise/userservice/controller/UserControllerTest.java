@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -91,7 +93,9 @@ class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void create_whenValidUser_shouldReturnCreated() throws Exception {
-    MvcResult result = mockMvc.perform(post(UserApi.BASE).contentType(MediaType.APPLICATION_JSON)
+    MvcResult result = mockMvc.perform(post(UserApi.BASE)
+            .with(user("admin").roles("ADMIN"))
+            .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(testUserDto))).andExpect(status().isCreated())
         .andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -104,15 +108,18 @@ class UserControllerTest extends IntegrationTestBase {
   void create_whenInvalidUser_shouldReturnBadRequest() throws Exception {
     UserDto incorrectDto = toDto(userFactory.createAndSaveNewTestUser());
     incorrectDto.setName("");
-    mockMvc.perform(post(UserApi.BASE).contentType(MediaType.APPLICATION_JSON)
+    mockMvc.perform(post(UserApi.BASE)
+        .with(user("admin").roles("ADMIN"))
+        .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(incorrectDto))).andExpect(status().isBadRequest());
   }
 
   @Test
   void userById_whenExist_shouldReturnUser() throws Exception {
     UserDto userDto = toDto(userFactory.createAndSaveNewTestUser());
-    MvcResult result = mockMvc.perform(
-            get(UserApi.BASE + UserApi.ID, userDto.getId()).accept(MediaType.APPLICATION_JSON))
+    MvcResult result = mockMvc.perform(get(UserApi.BASE + UserApi.ID, userDto.getId())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         UserDto.class);
@@ -122,15 +129,18 @@ class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void userById_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(get(UserApi.BASE + UserApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(get(UserApi.BASE + UserApi.ID, 99L)
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
   @Test
   void userByEmail_whenExist_shouldReturnUser() throws Exception {
     UserDto userDto = toDto(userFactory.createAndSaveNewTestUser());
-    MvcResult result = mockMvc.perform(
-            get(UserApi.BASE + UserApi.EMAIL, userDto.getEmail()).accept(MediaType.APPLICATION_JSON))
+    MvcResult result = mockMvc.perform(get(UserApi.BASE + UserApi.EMAIL, userDto.getEmail())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
         UserDto.class);
@@ -139,8 +149,9 @@ class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void userByEmail_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(get(UserApi.BASE + UserApi.EMAIL, "notpresentemail@test.com").accept(
-            MediaType.APPLICATION_JSON))
+    mockMvc.perform(get(UserApi.BASE + UserApi.EMAIL, "notpresentemail@test.com")
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
@@ -150,6 +161,7 @@ class UserControllerTest extends IntegrationTestBase {
     userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
         get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, "").param(SURNAME, "")
+            .with(user("admin").roles("ADMIN"))
             .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk()).andReturn();
     JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
     List<UserDto> users = objectMapper.readValue(root.get("content").toString(),
@@ -164,7 +176,9 @@ class UserControllerTest extends IntegrationTestBase {
     userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, user.getName())
-                .param(SURNAME, "").accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk())
+                .param(SURNAME, "")
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON)).andExpect(status().isOk())
         .andReturn();
     JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
     List<UserDto> users = objectMapper.readValue(root.get("content").toString(),
@@ -180,7 +194,9 @@ class UserControllerTest extends IntegrationTestBase {
     userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, "")
-                .param(SURNAME, user.getSurname()).accept(MediaType.APPLICATION_JSON))
+                .param(SURNAME, user.getSurname())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
     List<UserDto> users = objectMapper.readValue(root.get("content").toString(),
@@ -196,7 +212,9 @@ class UserControllerTest extends IntegrationTestBase {
     User user2 = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             get(UserApi.BASE).param(PAGE, "0").param(SIZE, "10").param(NAME, user1.getName())
-                .param(SURNAME, user2.getSurname()).accept(MediaType.APPLICATION_JSON))
+                .param(SURNAME, user2.getSurname())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
     List<UserDto> users = objectMapper.readValue(root.get("content").toString(),
@@ -209,7 +227,9 @@ class UserControllerTest extends IntegrationTestBase {
   void update_whenValid_shouldReturnOk() throws Exception {
     UserDto savedUser = toDto(userFactory.createAndSaveNewTestUser());
     MvcResult result = mockMvc.perform(
-            put(UserApi.BASE + UserApi.ID, savedUser.getId()).contentType(MediaType.APPLICATION_JSON)
+            put(UserApi.BASE + UserApi.ID, savedUser.getId())
+                .with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testUserDto))).andExpect(status().isOk())
         .andReturn();
     UserDto updated = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -222,7 +242,9 @@ class UserControllerTest extends IntegrationTestBase {
   void getCardsByUserId_whenExist_shouldReturnCards() throws Exception {
     cardFactory.createAndSaveNewTestCard(testUser);
     MvcResult result = mockMvc.perform(
-            get(UserApi.BASE + UserApi.CARDS, testUser.getId()).accept(MediaType.APPLICATION_JSON))
+            get(UserApi.BASE + UserApi.CARDS, testUser.getId())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     List<PaymentCardDto> cards = objectMapper.readValue(result.getResponse().getContentAsString(),
         new TypeReference<List<PaymentCardDto>>() {
@@ -232,7 +254,9 @@ class UserControllerTest extends IntegrationTestBase {
 
   @Test
   void getCardsByUserId_whenDoesNotExist_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(get(UserApi.BASE + UserApi.CARDS, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(get(UserApi.BASE + UserApi.CARDS, 99L)
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 
@@ -241,6 +265,7 @@ class UserControllerTest extends IntegrationTestBase {
     User user = userFactory.createAndSaveNewTestUser();
     MvcResult result = mockMvc.perform(
             patch(UserApi.BASE + UserApi.ID, user.getId())
+                .with(user("admin").roles("ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(activePatchDto))
                 .accept(MediaType.APPLICATION_JSON))
@@ -256,6 +281,7 @@ class UserControllerTest extends IntegrationTestBase {
             patch(UserApi.BASE + UserApi.ID, 99L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(activePatchDto))
+                .with(user("admin").roles("ADMIN"))
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
@@ -268,6 +294,7 @@ class UserControllerTest extends IntegrationTestBase {
             patch(UserApi.BASE + UserApi.ID, user.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(activePatchDto))
+                .with(user("admin").roles("ADMIN"))
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk()).andReturn();
     UserDto fetched = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -280,13 +307,17 @@ class UserControllerTest extends IntegrationTestBase {
     User user = userFactory.createAndSaveNewTestUser();
 
     mockMvc.perform(
-            delete(UserApi.BASE + UserApi.ID, user.getId()).accept(MediaType.APPLICATION_JSON))
+            delete(UserApi.BASE + UserApi.ID, user.getId())
+                .with(user("admin").roles("ADMIN"))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
   }
 
   @Test
   void deleteUser_whenDoesNotExists_shouldReturnNotFound() throws Exception {
-    mockMvc.perform(delete(UserApi.BASE + UserApi.ID, 99L).accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(delete(UserApi.BASE + UserApi.ID, 99L)
+            .with(user("admin").roles("ADMIN"))
+            .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
   }
 

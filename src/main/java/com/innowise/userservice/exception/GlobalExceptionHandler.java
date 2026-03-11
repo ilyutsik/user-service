@@ -1,10 +1,8 @@
 package com.innowise.userservice.exception;
 
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -40,18 +38,25 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
   }
 
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.value(),
+        "Forbidden", ex.getMessage());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(errorResponse);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponseValidation> handleValidationException(
+  public ResponseEntity<ErrorResponse> handleValidationException(
       MethodArgumentNotValidException ex) {
 
-    Map<String, String> errors = ex.getBindingResult()
+    String error = ex.getBindingResult()
         .getFieldErrors()
-        .stream()
-        .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage,
-            (msg1, msg2) -> msg1 + "; " + msg2));
+        .getFirst()
+        .getDefaultMessage();
 
-    ErrorResponseValidation response = new ErrorResponseValidation(HttpStatus.BAD_REQUEST.value(),
-        "Validation Failed", errors);
+    ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
+        "Validation Failed", error);
     return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 

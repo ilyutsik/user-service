@@ -140,7 +140,8 @@ class UserServiceImplTest {
   @Test
   void getByEmail_UserNotFond_ShouldThrowException() {
     when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> userService.getByEmail(user.getEmail())).isInstanceOf(UserNotFoundException.class);
+    String email = user.getEmail();
+    assertThatThrownBy(() -> userService.getByEmail(email)).isInstanceOf(UserNotFoundException.class);
   }
 
   @Test

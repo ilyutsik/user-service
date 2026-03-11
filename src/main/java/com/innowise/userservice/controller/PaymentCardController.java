@@ -1,5 +1,7 @@
 package com.innowise.userservice.controller;
 
+import com.innowise.userservice.config.security.annotation.AdminOnly;
+import com.innowise.userservice.config.security.annotation.CardOwnerOrAdmin;
 import com.innowise.userservice.model.dto.PaymentCardActivePatchDto;
 import com.innowise.userservice.model.dto.PaymentCardDto;
 import com.innowise.userservice.service.PaymentCardService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,18 +29,22 @@ public class PaymentCardController {
 
   private final PaymentCardService paymentCardServiceImpl;
 
-  @PostMapping()
-  public ResponseEntity<PaymentCardDto> create(@Valid @RequestBody PaymentCardDto paymentCardDto) {
+  @PostMapping
+  public ResponseEntity<PaymentCardDto> create(@RequestHeader("X-USER-ID") Long userId,
+      @Valid @RequestBody PaymentCardDto paymentCardDto) {
+    paymentCardDto.setUserId(userId);
     PaymentCardDto createdDto = paymentCardServiceImpl.create(paymentCardDto);
     return ResponseEntity.status(HttpStatus.CREATED).body(createdDto);
   }
 
+  @CardOwnerOrAdmin
   @GetMapping(CardApi.ID)
   public ResponseEntity<PaymentCardDto> getById(@PathVariable(name = "id") Long id) {
     PaymentCardDto paymentCardDto = paymentCardServiceImpl.getById(id);
     return ResponseEntity.ok(paymentCardDto);
   }
 
+  @AdminOnly
   @GetMapping
   public ResponseEntity<Page<PaymentCardDto>> getAll(
       @RequestParam(name = "page", defaultValue = "0") int page,
@@ -46,13 +53,17 @@ public class PaymentCardController {
     return ResponseEntity.ok(cards);
   }
 
+  @CardOwnerOrAdmin
   @PutMapping(CardApi.ID)
   public ResponseEntity<PaymentCardDto> update(@PathVariable(name = "id") Long id,
+      @RequestHeader("X-USER-ID") Long userId,
       @Valid @RequestBody PaymentCardDto paymentCardDto) {
+    paymentCardDto.setUserId(userId);
     PaymentCardDto updatedCardDto = paymentCardServiceImpl.updateById(id, paymentCardDto);
     return ResponseEntity.ok(updatedCardDto);
   }
 
+  @AdminOnly
   @PatchMapping(CardApi.ID)
   public ResponseEntity<PaymentCardDto> active(@PathVariable(name = "id") Long id,
       @Valid @RequestBody PaymentCardActivePatchDto dto) {
@@ -60,6 +71,7 @@ public class PaymentCardController {
     return ResponseEntity.ok(activatedCard);
   }
 
+  @CardOwnerOrAdmin
   @DeleteMapping(CardApi.ID)
   public ResponseEntity<Void> delete(@PathVariable(name = "id") Long id) {
     paymentCardServiceImpl.delete(id);

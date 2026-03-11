@@ -22,7 +22,6 @@ public class PaymentCardDto {
 
   private Long id;
 
-  @NotNull(message = "User id must not be null")
   private Long userId;
 
   @NotBlank(message = "Card number must not be blank")
