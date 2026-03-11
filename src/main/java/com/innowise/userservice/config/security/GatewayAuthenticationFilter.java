@@ -24,7 +24,8 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
     String userId = request.getHeader("X-USER-ID");
     String role = request.getHeader("X-USER-ROLE");
 
-    if (userId != null && role != null) {
+    if (userId != null && !userId.isBlank() &&
+        role != null && !role.isBlank()) {
 
       UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
           userId, null, List.of(new SimpleGrantedAuthority(role)));
